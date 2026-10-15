@@ -12502,6 +12502,7 @@ subagent_developer_instructions = "  \t  "
     .expect("multi-agent v2 config should parse");
 
     let expected = MultiAgentV2Config {
+        plaintext_messages: false,
         subagent_developer_instructions: Some(String::new()),
         multi_agent_mode_hint_text: Some(String::new()),
         ..resolve_multi_agent_v2_config(&ConfigToml::default())
@@ -13601,4 +13602,18 @@ fn sqlite_home_env_conflict_reports_an_override() -> std::io::Result<()> {
     assert!(warnings.is_empty());
 
     Ok(())
+}
+
+#[test]
+fn multi_agent_v2_plaintext_messages_choose_an_unreserved_namespace() {
+    let config: ConfigToml =
+        toml::from_str("[features.multi_agent_v2]\nplaintext_messages = true\n")
+            .expect("plaintext transport config");
+    let resolved = resolve_multi_agent_v2_config(&config);
+    assert!(resolved.plaintext_messages);
+    assert_eq!(
+        resolved.tool_namespace.as_deref(),
+        Some("collaboration_plaintext")
+    );
+    assert!(!resolve_multi_agent_v2_config(&ConfigToml::default()).plaintext_messages);
 }

@@ -54,13 +54,34 @@ pub(crate) async fn emit_sub_agent_activity(
 fn agent_message_from_tool(
     message: String,
     source: &crate::tools::context::ToolCallSource,
+    plaintext_messages: bool,
 ) -> AgentMessage {
-    if matches!(
-        source,
-        crate::tools::context::ToolCallSource::DirectPlaintextMessage
-    ) {
+    if plaintext_messages
+        || matches!(
+            source,
+            crate::tools::context::ToolCallSource::DirectPlaintextMessage
+        )
+    {
         AgentMessage::Plaintext(message)
     } else {
         AgentMessage::Encrypted(message)
+    }
+}
+
+#[cfg(test)]
+mod plaintext_transport_tests {
+    use super::*;
+    use crate::tools::context::ToolCallSource;
+
+    #[test]
+    fn plaintext_transport_is_explicit_and_default_transport_stays_encrypted() {
+        assert!(matches!(
+            agent_message_from_tool("hello".to_string(), &ToolCallSource::Direct, true),
+            AgentMessage::Plaintext(text) if text == "hello"
+        ));
+        assert!(matches!(
+            agent_message_from_tool("ciphertext".to_string(), &ToolCallSource::Direct, false),
+            AgentMessage::Encrypted(text) if text == "ciphertext"
+        ));
     }
 }

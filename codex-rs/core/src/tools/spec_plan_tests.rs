@@ -3392,3 +3392,34 @@ async fn hosted_web_search_and_standalone_image_generation_follow_runtime_gates(
 
 #[path = "spec_plan_strict_third_party_tests.rs"]
 mod strict_third_party;
+
+#[tokio::test]
+async fn multi_agent_v2_plaintext_transport_keeps_the_v2_tool_family() {
+    let plan = probe(|turn| {
+        set_feature(turn, Feature::MultiAgentV2, true);
+        update_config(turn, |config| {
+            config.multi_agent_v2.plaintext_messages = true;
+            config.multi_agent_v2.tool_namespace = Some("collaboration_plaintext".to_string());
+        });
+    })
+    .await;
+    let ToolSpec::Namespace(namespace) = plan.visible_spec("collaboration_plaintext") else {
+        panic!("expected native plaintext v2 namespace");
+    };
+    for name in ["spawn_agent", "send_message", "followup_task"] {
+        let Some(ResponsesApiNamespaceTool::Function(tool)) = namespace.tools.iter().find(
+            |tool| matches!(tool, ResponsesApiNamespaceTool::Function(tool) if tool.name == name),
+        ) else {
+            panic!("missing message tool {name}")
+        };
+        assert_eq!(
+            tool.parameters.properties.as_ref().unwrap()["message"].encrypted,
+            None
+        );
+    }
+    assert!(plan.can_manage_children);
+    assert!(namespace.tools.iter().any(|tool| {
+        matches!(tool, ResponsesApiNamespaceTool::Function(tool) if tool.name == "list_agents")
+    }));
+    plan.assert_visible_lacks(&["multi_agent_v1"]);
+}

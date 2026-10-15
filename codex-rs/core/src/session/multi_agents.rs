@@ -70,7 +70,14 @@ pub(crate) fn resolve_usage_hints(
         subagent: resolve_role(
             config.subagent_usage_hint_text.as_deref(),
             multi_agent_messages.subagent,
-        ),
+        )
+        .map(|role| {
+            if config.plaintext_messages {
+                role.with_plaintext_task_scope()
+            } else {
+                role
+            }
+        }),
     }
 }
 

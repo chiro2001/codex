@@ -32,6 +32,38 @@ pub enum MultiAgentRoleInstructions {
     },
 }
 
+const PLAINTEXT_CHILD_TASK_SCOPE: &str = "Your current assignment is the most recent NEW_TASK addressed to your own task path. Inherited messages provide shared requirements and background for the parent task. The parent has already completed the delegation step that created you; do not repeat it. Continue to follow the current assignment and all applicable instructions, including their restrictions on further delegation.";
+
+impl MultiAgentRoleInstructions {
+    pub fn with_plaintext_task_scope(self) -> Self {
+        match self {
+            Self::Configured(_) => self,
+            Self::Composed {
+                base,
+                marked,
+                omit_update_plan_instructions,
+                max_concurrency,
+                wait_agent_enabled,
+                expose_model_overrides,
+            } => {
+                let base = if omit_update_plan_instructions {
+                    without_update_plan_instructions(&base)
+                } else {
+                    base
+                };
+                Self::Composed {
+                    base: format!("{base}\n\n{PLAINTEXT_CHILD_TASK_SCOPE}"),
+                    marked,
+                    omit_update_plan_instructions: false,
+                    max_concurrency,
+                    wait_agent_enabled,
+                    expose_model_overrides,
+                }
+            }
+        }
+    }
+}
+
 impl ContextualUserFragment for MultiAgentRoleInstructions {
     fn content_kind(&self) -> ContentItemKind {
         ContentItemKind("multi_agent.role_instructions".to_string())

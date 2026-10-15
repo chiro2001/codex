@@ -42,3 +42,32 @@ fn role_segment_filters_base_and_appends_bundled_guidance() {
         );
     }
 }
+
+#[test]
+fn plaintext_task_scope_preserves_runtime_guidance_and_catalog_attribution() {
+    let role = MultiAgentRoleInstructions::Composed {
+        base: "Child role.\n## Plan tool\nOmit this plan section.".to_string(),
+        marked: true,
+        omit_update_plan_instructions: true,
+        max_concurrency: 7,
+        wait_agent_enabled: true,
+        expose_model_overrides: true,
+    }
+    .with_plaintext_task_scope();
+    let text = role.body();
+    assert!(text.contains(PLAINTEXT_CHILD_TASK_SCOPE));
+    assert!(!text.contains("Omit this plan section"));
+    assert!(text.contains("7 available concurrency slots"));
+    assert!(text.contains(DEFAULT_MULTI_AGENT_V2_WAIT_AGENT_USAGE_HINT_TEXT));
+    assert!(text.contains(DEFAULT_MULTI_AGENT_V2_MODEL_OVERRIDE_USAGE_HINT_TEXT));
+    assert_eq!(
+        role.markers(),
+        ("<multi_agent_role>", "</multi_agent_role>")
+    );
+}
+
+#[test]
+fn plaintext_task_scope_preserves_explicit_user_role_override() {
+    let role = MultiAgentRoleInstructions::Configured("User-owned role guidance.".to_string());
+    assert_eq!(role.clone().with_plaintext_task_scope(), role);
+}

@@ -1367,6 +1367,7 @@ impl Default for CurrentTimeReminderConfig {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MultiAgentV2Config {
+    pub plaintext_messages: bool,
     pub max_concurrent_threads_per_session: usize,
     pub min_wait_timeout_ms: i64,
     pub max_wait_timeout_ms: i64,
@@ -1391,6 +1392,7 @@ pub struct MultiAgentV2Config {
 impl MultiAgentV2Config {
     fn defaults_for_max_concurrency(max_concurrent_threads_per_session: usize) -> Self {
         Self {
+            plaintext_messages: false,
             max_concurrent_threads_per_session,
             min_wait_timeout_ms: DEFAULT_MULTI_AGENT_V2_MIN_WAIT_TIMEOUT_MS,
             max_wait_timeout_ms: DEFAULT_MULTI_AGENT_V2_MAX_WAIT_TIMEOUT_MS,
@@ -2812,6 +2814,9 @@ fn resolve_code_mode_config(config_toml: &ConfigToml) -> CodeModeConfig {
 
 fn resolve_multi_agent_v2_config(config_toml: &ConfigToml) -> MultiAgentV2Config {
     let base = multi_agent_v2_toml_config(config_toml.features.as_ref());
+    let plaintext_messages = base
+        .and_then(|config| config.plaintext_messages)
+        .unwrap_or(false);
     let max_concurrent_threads_per_session = base
         .and_then(|config| config.max_concurrent_threads_per_session)
         .or_else(|| {
@@ -2874,12 +2879,19 @@ fn resolve_multi_agent_v2_config(config_toml: &ConfigToml) -> MultiAgentV2Config
     let tool_namespace = base
         .and_then(|config| config.tool_namespace.as_ref())
         .cloned()
-        .or(default.tool_namespace);
+        .or_else(|| {
+            if plaintext_messages {
+                Some("collaboration_plaintext".to_string())
+            } else {
+                default.tool_namespace
+            }
+        });
     let non_code_mode_only = base
         .and_then(|config| config.non_code_mode_only)
         .unwrap_or(default.non_code_mode_only);
 
     MultiAgentV2Config {
+        plaintext_messages,
         max_concurrent_threads_per_session,
         min_wait_timeout_ms,
         max_wait_timeout_ms,
@@ -3991,6 +4003,14 @@ impl Config {
             ));
         }
         validate_multi_agent_v2_tool_namespace(multi_agent_v2.tool_namespace.as_deref())?;
+        if multi_agent_v2.plaintext_messages
+            && multi_agent_v2.tool_namespace.as_deref() == Some("collaboration")
+        {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "Plaintext V2 messages require an unreserved tool namespace; omit tool_namespace to use collaboration_plaintext",
+            ));
+        }
         let agents_enabled = cfg
             .agents
             .as_ref()

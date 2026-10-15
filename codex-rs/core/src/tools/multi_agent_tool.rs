@@ -23,6 +23,7 @@ pub(super) fn multi_agent_v2_handler(
     namespace: Option<&str>,
     description_override: Option<&str>,
     parameters_override: Option<&str>,
+    plaintext_messages: bool,
 ) -> Arc<dyn CoreToolRuntime> {
     let parameters_override = parameters_override.map(|parameters| -> Result<JsonSchema, &str> {
         let mut parameters = super::catalog_parameters::parse(parameters)?;
@@ -47,11 +48,16 @@ pub(super) fn multi_agent_v2_handler(
         tracing::warn!(tool = %handler.tool_name(), reason, "Invalid catalog tool parameters; using bundled parameters");
     }
     let parameters_override = parameters_override.and_then(Result::ok);
-    if namespace.is_none() && description_override.is_none() && parameters_override.is_none() {
+    if !plaintext_messages
+        && namespace.is_none()
+        && description_override.is_none()
+        && parameters_override.is_none()
+    {
         return Arc::new(handler);
     }
     Arc::new(MultiAgentV2ToolOverrides {
         handler: Arc::new(handler),
+        plaintext_messages,
         namespace: namespace.map(str::to_owned),
         description_override: description_override.map(str::to_owned),
         parameters_override,
@@ -59,6 +65,7 @@ pub(super) fn multi_agent_v2_handler(
 }
 
 struct MultiAgentV2ToolOverrides {
+    plaintext_messages: bool,
     handler: Arc<dyn CoreToolRuntime>,
     namespace: Option<String>,
     description_override: Option<String>,
@@ -82,6 +89,12 @@ impl ToolExecutor<ToolInvocation> for MultiAgentV2ToolOverrides {
             }
             if let Some(parameters) = &self.parameters_override {
                 tool.parameters.clone_from(parameters);
+            }
+            if self.plaintext_messages
+                && let Some(properties) = tool.parameters.properties.as_mut()
+                && let Some(message) = properties.get_mut("message")
+            {
+                message.encrypted = None;
             }
         }
         match (&self.namespace, spec) {
