@@ -37,6 +37,7 @@ const STDERR_LOG_TAIL_BYTES: u64 = 4096;
 #[cfg_attr(not(any(unix, windows)), allow(dead_code))]
 pub(crate) struct PidBackend {
     pub(super) feature_overrides: BTreeMap<String, bool>,
+    pub(super) config_overrides: Vec<String>,
     codex_bin: PathBuf,
     pid_file: PathBuf,
     lock_file: PathBuf,
@@ -112,6 +113,7 @@ impl PidBackend {
         let lock_file = pid_file.with_extension("pid.lock");
         Self {
             feature_overrides: BTreeMap::new(),
+            config_overrides: Vec::new(),
             codex_bin,
             pid_file,
             lock_file,
@@ -129,6 +131,7 @@ impl PidBackend {
         let lock_file = pid_file.with_extension("pid.lock");
         Self {
             feature_overrides: BTreeMap::new(),
+            config_overrides: Vec::new(),
             codex_bin,
             pid_file,
             lock_file,
@@ -419,6 +422,11 @@ impl PidBackend {
             args.push("--analytics-default-enabled".into());
             for (name, enabled) in &self.feature_overrides {
                 args.extend(["-c".into(), format!("features.{name}={enabled}").into()]);
+            }
+            // Preserve structured features and provider settings across managed
+            // restarts without modifying config.toml used by existing clients.
+            for config in &self.config_overrides {
+                args.extend(["-c".into(), config.as_str().into()]);
             }
         }
         args

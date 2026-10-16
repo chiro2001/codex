@@ -19,6 +19,7 @@ pub(crate) const MAX_SHUTDOWN_GRACE_SECONDS: u32 = 5 * 60;
 pub(crate) struct DaemonSettings {
     pub(crate) remote_control_enabled: bool,
     pub(crate) feature_overrides: BTreeMap<String, bool>,
+    pub(crate) config_overrides: Vec<String>,
     pub(crate) auto_update_enabled: bool,
     pub(crate) update_interval_minutes: u32,
     pub(crate) shutdown_grace_seconds: u32,
@@ -29,6 +30,7 @@ impl Default for DaemonSettings {
         Self {
             remote_control_enabled: false,
             feature_overrides: BTreeMap::new(),
+            config_overrides: Vec::new(),
             auto_update_enabled: true,
             update_interval_minutes: DEFAULT_UPDATE_INTERVAL_MINUTES,
             shutdown_grace_seconds: DEFAULT_SHUTDOWN_GRACE_SECONDS,
@@ -49,6 +51,8 @@ struct StoredSettings {
     remote_control_enabled: bool,
     #[serde(default)]
     feature_overrides: BTreeMap<String, bool>,
+    #[serde(default)]
+    config_overrides: Vec<String>,
     #[serde(default = "default_shutdown_grace_seconds")]
     shutdown_grace_seconds: u32,
     #[serde(default)]
@@ -60,6 +64,7 @@ impl Default for StoredSettings {
         Self {
             remote_control_enabled: false,
             feature_overrides: BTreeMap::new(),
+            config_overrides: Vec::new(),
             shutdown_grace_seconds: DEFAULT_SHUTDOWN_GRACE_SECONDS,
             updater: UpdaterSettings::default(),
         }
@@ -134,6 +139,7 @@ impl DaemonSettings {
         Ok(Self {
             remote_control_enabled: settings.remote_control_enabled,
             feature_overrides: settings.feature_overrides,
+            config_overrides: settings.config_overrides,
             auto_update_enabled: settings.updater.auto_update_enabled,
             update_interval_minutes: settings.updater.update_interval_minutes,
             shutdown_grace_seconds: settings.shutdown_grace_seconds,
@@ -174,6 +180,14 @@ impl DaemonSettings {
             settings.insert(
                 "featureOverrides".to_string(),
                 serde_json::to_value(&self.feature_overrides)?,
+            );
+        }
+        if self.config_overrides.is_empty() {
+            settings.remove("configOverrides");
+        } else {
+            settings.insert(
+                "configOverrides".to_string(),
+                serde_json::to_value(&self.config_overrides)?,
             );
         }
         let contents =

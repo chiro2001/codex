@@ -24,6 +24,7 @@ pub(crate) struct BackendPaths {
     pub(crate) update_pid_file: PathBuf,
     pub(crate) remote_control_enabled: bool,
     pub(crate) feature_overrides: BTreeMap<String, bool>,
+    pub(crate) config_overrides: Vec<String>,
 }
 
 pub(crate) fn pid_backend(paths: BackendPaths) -> PidBackend {
@@ -33,6 +34,7 @@ pub(crate) fn pid_backend(paths: BackendPaths) -> PidBackend {
         paths.remote_control_enabled,
     );
     backend.feature_overrides = paths.feature_overrides;
+    backend.config_overrides = paths.config_overrides;
     backend
 }
 

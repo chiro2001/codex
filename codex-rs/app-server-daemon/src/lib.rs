@@ -1087,6 +1087,7 @@ impl Daemon {
             update_pid_file: self.update_pid_file.clone(),
             remote_control_enabled: settings.remote_control_enabled,
             feature_overrides: settings.feature_overrides.clone(),
+            config_overrides: settings.config_overrides.clone(),
         }
     }
 

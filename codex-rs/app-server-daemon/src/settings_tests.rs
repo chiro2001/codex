@@ -153,3 +153,32 @@ async fn telemetry_distinguishes_presence_from_default_values() -> anyhow::Resul
     }
     Ok(())
 }
+
+#[tokio::test]
+async fn structured_config_survives_remote_control_changes_and_can_be_cleared() {
+    let temp = TempDir::new().expect("temp dir");
+    let path = temp.path().join("settings.json");
+    let mut settings = DaemonSettings {
+        config_overrides: vec![
+            "features.multi_agent_v2.enabled=true".into(),
+            "features.multi_agent_v2.plaintext_messages=true".into(),
+            "model_providers.litellm.base_url=\"http://127.0.0.1:11112/v1\"".into(),
+        ],
+        ..DaemonSettings::default()
+    };
+    settings.save(&path).await.expect("save launch config");
+    let mut loaded = DaemonSettings::load(&path)
+        .await
+        .expect("load launch config");
+    assert_eq!(loaded.config_overrides, settings.config_overrides);
+    loaded.remote_control_enabled = true;
+    loaded.save(&path).await.expect("change remote control");
+    settings.remote_control_enabled = true;
+    assert_eq!(DaemonSettings::load(&path).await.expect("reload"), settings);
+    loaded.config_overrides.clear();
+    loaded.save(&path).await.expect("clear launch config");
+    let raw: serde_json::Value =
+        serde_json::from_slice(&tokio::fs::read(&path).await.expect("read saved config"))
+            .expect("parse saved config");
+    assert!(raw.get("configOverrides").is_none());
+}

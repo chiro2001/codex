@@ -572,6 +572,7 @@ async fn exited_unreaped_updater_is_reaped() {
 fn update_loop_uses_hidden_app_server_subcommand() {
     let backend = PidBackend {
         feature_overrides: Default::default(),
+        config_overrides: vec!["features.multi_agent_v2.plaintext_messages=true".into()],
         codex_bin: "codex".into(),
         pid_file: "updater.pid".into(),
         lock_file: "updater.pid.lock".into(),
@@ -1046,4 +1047,34 @@ async fn stderr_handoff_appends_after_truncation_without_gaps() -> anyhow::Resul
         b"successor startup failure\npredecessor handoff complete\n"
     );
     Ok(())
+}
+
+#[test]
+fn managed_app_server_preserves_structured_config_as_separate_arguments() {
+    let mut backend = PidBackend::new("codex".into(), "daemon.pid".into(), false);
+    backend
+        .feature_overrides
+        .insert("multi_agent_v2".into(), true);
+    backend.config_overrides = vec![
+        "features.multi_agent_v2.enabled=true".into(),
+        "features.multi_agent_v2.plaintext_messages=true".into(),
+        "model_providers.litellm.base_url=\"http://127.0.0.1:11112/v1\"".into(),
+    ];
+    assert_eq!(
+        backend.command_args(),
+        vec![
+            "app-server",
+            "--listen",
+            "unix://",
+            "--analytics-default-enabled",
+            "-c",
+            "features.multi_agent_v2=true",
+            "-c",
+            "features.multi_agent_v2.enabled=true",
+            "-c",
+            "features.multi_agent_v2.plaintext_messages=true",
+            "-c",
+            "model_providers.litellm.base_url=\"http://127.0.0.1:11112/v1\"",
+        ]
+    );
 }

@@ -2073,7 +2073,7 @@ dependencies = [
 
 [[package]]
 name = "codex-app-server"
-version = "0.0.0"
+version = "0.161.0-native.2"
 dependencies = [
  "anyhow",
  "app_test_support",
@@ -2214,7 +2214,7 @@ dependencies = [
 
 [[package]]
 name = "codex-app-server-daemon"
-version = "0.0.0"
+version = "0.161.0-native.2"
 dependencies = [
  "anyhow",
  "blake3",
@@ -2505,7 +2505,7 @@ dependencies = [
 
 [[package]]
 name = "codex-cli"
-version = "0.161.0-native.1"
+version = "0.161.0-native.2"
 dependencies = [
  "anyhow",
  "app_test_support",
@@ -3848,7 +3848,7 @@ dependencies = [
 
 [[package]]
 name = "codex-login"
-version = "0.0.0"
+version = "0.161.0-native.2"
 dependencies = [
  "anyhow",
  "base64 0.22.1",
