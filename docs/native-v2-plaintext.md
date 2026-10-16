@@ -1,5 +1,10 @@
 # Opt-in plaintext messages for multi-agent V2
 
+The CLI package reports the custom version `0.161.0-native.1`. This identifies
+the fork and retains compatibility with clients that gate app-server and goal
+actions on CLI version numbers. The source baseline is the main-branch commit
+recorded in the fork history; this is not an unmodified upstream release.
+
 This fork adds an explicit plaintext transport for V2 agent messages. It retains
 the native agent tree, live mailbox delivery, `spawn_agent`, `send_message`, and
 `followup_task`. This is intended for collaboration between providers that cannot
